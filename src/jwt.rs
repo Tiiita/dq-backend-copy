@@ -1,5 +1,6 @@
 
 use axum::body::Body;
+use axum::http::header::AUTHORIZATION;
 use axum::http::Request;
 use axum::http::Response;
 use axum::http::StatusCode;
@@ -54,7 +55,7 @@ pub async fn jwt_middleware(
 ) -> Result<Response<Body>, StatusCode> {
     let auth_header = request
         .headers()
-        .get("Authorization")
+        .get(AUTHORIZATION)
         .and_then(|header| header.to_str().ok())
         .and_then(|header| header.strip_prefix("Bearer "));
 

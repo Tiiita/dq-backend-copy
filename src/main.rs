@@ -1,3 +1,5 @@
+use std::env;
+
 use env_logger::Builder;
 use log::{debug, info, LevelFilter};
 
@@ -5,6 +7,7 @@ use axum::{
     middleware, routing::{get, post}, serve, Router
 };
 use dq_backend::{endpoint::{beta, user}, jwt};
+use surrealdb::{engine::remote::ws::Ws, error::Db, opt::auth::Credentials, Error, Surreal};
 use tokio::net::TcpListener;
 
 const ADDR: &str = "0.0.0.0:8080";
@@ -24,6 +27,10 @@ async fn main() {
     serve(listener, app())
         .await
         .expect("Failed to start server");
+}
+
+async fn connect_db() -> Result<(), Error> {
+    
 }
 
 fn app() -> Router {
