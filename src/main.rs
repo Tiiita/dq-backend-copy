@@ -1,3 +1,5 @@
+use std::env;
+
 use env_logger::Builder;
 use log::{debug, info, LevelFilter};
 
@@ -7,8 +9,6 @@ use axum::{
 use dq_backend::{endpoint::{beta, user}, jwt};
 use tokio::net::TcpListener;
 
-const ADDR: &str = "0.0.0.0:8080";
-
 #[tokio::main]
 async fn main() {
     Builder::new()
@@ -16,10 +16,13 @@ async fn main() {
         .format_target(false)
         .init();
 
-    let listener = TcpListener::bind(ADDR)
+
+
+    let addr = env::var("SERVER_ADDR").expect("Failed to locate server address field");
+    let listener = TcpListener::bind(&addr)
         .await
         .expect("Failed to bind listener to address");
-    info!("Listening on {ADDR}");
+    info!("Listening on {addr}");
     debug!("{}", jwt::gen_token("testid".to_string()).unwrap());
     serve(listener, app())
         .await
