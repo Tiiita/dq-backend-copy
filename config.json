@@ -1,0 +1,9 @@
+{
+    "serverAddr": "0.0.0.0:8080",
+    "db": {
+        "addr": "unknown",
+        "username": "unknown",
+        "password": "unknown",
+        "port": 0
+    }
+}

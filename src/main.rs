@@ -1,7 +1,7 @@
-use std::{env, sync::Arc};
+use std::sync::Arc;
 
 use env_logger::Builder;
-use log::{debug, info, LevelFilter};
+use log::{info, LevelFilter};
 
 use axum::{
     middleware, routing::{get, post}, serve, Router
