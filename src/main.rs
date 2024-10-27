@@ -1,4 +1,4 @@
-use std::env;
+use std::{env, sync::Arc};
 
 use env_logger::Builder;
 use log::{debug, info, LevelFilter};
@@ -6,7 +6,7 @@ use log::{debug, info, LevelFilter};
 use axum::{
     middleware, routing::{get, post}, serve, Router
 };
-use dq_backend::{endpoint::{beta, user}, jwt};
+use dq_backend::{config::{self, Config}, endpoint::{beta, user}, jwt};
 use tokio::net::TcpListener;
 
 #[tokio::main]
@@ -17,19 +17,18 @@ async fn main() {
         .init();
 
 
-
-    let addr = env::var("SERVER_ADDR").expect("Failed to locate server address field");
-    let listener = TcpListener::bind(&addr)
+    let config = config::load();
+    let listener = TcpListener::bind(&config.server_addr)
         .await
         .expect("Failed to bind listener to address");
-    info!("Listening on {addr}");
-    debug!("{}", jwt::gen_token("testid".to_string()).unwrap());
-    serve(listener, app())
+    info!("Listening on {}", &config.server_addr);
+
+    serve(listener, app(config))
         .await
         .expect("Failed to start server");
 }
 
-fn app() -> Router {
+fn app(config: Config) -> Router {
     let authenticated_router = Router::new()
         .route("/beta/new-key", post(beta::new_key))
         .route("/beta/remove-key", post(beta::remove_key))
@@ -45,4 +44,5 @@ fn app() -> Router {
         .route("/user/login", post(user::login_user));
 
     Router::merge(authenticated_router, unauthed_router)
+    .with_state(Arc::new(config))
 }
