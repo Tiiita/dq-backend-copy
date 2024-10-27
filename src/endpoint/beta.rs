@@ -1,18 +1,20 @@
-use axum::{http::StatusCode, response::IntoResponse, Json};
+use axum::{http::StatusCode, response::IntoResponse, Extension, Json};
 use log::info;
 use rand::{thread_rng, Rng};
 use serde::Deserialize;
 
-use crate::jwt::Authenticated;
 
-pub async fn new_key(Json(auth): Json<Authenticated<NewKeyRequest>>) -> impl IntoResponse {
+use crate::jwt::Claims;
+
+pub async fn new_key(Extension(claims): Extension<Claims>) -> impl IntoResponse {
     let key = gen_beta_key();
 
     //Add to db
 
     info!(
+
         "'{}' created new beta key: {}",
-        auth.payload.discord_id, key
+        claims.user_id, key
     );
     (StatusCode::CREATED, key)
 }

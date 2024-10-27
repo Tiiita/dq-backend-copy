@@ -1,3 +1,9 @@
+
+use axum::body::Body;
+use axum::http::Request;
+use axum::http::Response;
+use axum::http::StatusCode;
+use axum::middleware::Next;
 use chrono::Duration;
 use chrono::Utc;
 use jsonwebtoken::decode;
@@ -23,7 +29,8 @@ pub fn gen_token(user_id: String) -> Result<String, Error> {
     encode(&Header::default(), &claims, &encoding_key)
 }
 
-pub fn extract_uid(token: &str) -> Result<String, Error> {
+
+pub fn extract_claims(token: &str) -> Result<Claims, Error> {
     let claims = decode::<Claims>(
         &token,
         &DecodingKey::from_secret(JWT_SECRET.as_ref()),
@@ -31,24 +38,34 @@ pub fn extract_uid(token: &str) -> Result<String, Error> {
     )?
     .claims;
 
-    Ok(claims.user_id)
+    Ok(claims)
 }
 
-#[derive(Deserialize, Serialize)]
-struct Claims {
-    user_id: String, //uuid v4
-    iat: usize,
-    exp: usize,
+#[derive(Clone, Deserialize, Serialize)]
+pub struct Claims {
+    pub user_id: String, //uuid v4
+    pub iat: usize,
+    pub exp: usize,
 }
 
-#[derive(Deserialize, Serialize)]
-pub struct Authenticated<P> {
-    pub user_id: String,
-    pub token: String,
-    pub payload: P,
-}
+pub async fn jwt_middleware(
+    mut request: Request<Body>,
+    next: Next,
+) -> Result<Response<Body>, StatusCode> {
+    let auth_header = request
+        .headers()
+        .get("Authorization")
+        .and_then(|header| header.to_str().ok())
+        .and_then(|header| header.strip_prefix("Bearer "));
 
-#[derive(Clone)]
-pub struct JwtMiddleware {
+    let auth_header = auth_header.ok_or(StatusCode::UNAUTHORIZED)?;
 
+    let claims = match extract_claims(auth_header) {
+        Ok(claims) => claims,
+        Err(_) => return Err(StatusCode::UNAUTHORIZED),
+    };
+
+    request.extensions_mut().insert(claims);
+
+    Ok(next.run(request).await)
 }
