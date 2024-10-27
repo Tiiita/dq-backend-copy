@@ -1,4 +1,3 @@
-
 use chrono::Duration;
 use chrono::Utc;
 use jsonwebtoken::decode;
@@ -17,6 +16,7 @@ pub fn gen_token(user_id: String) -> Result<String, Error> {
     let encoding_key = EncodingKey::from_secret(JWT_SECRET.as_ref());
     let claims = Claims {
         user_id,
+        iat: Utc::now().timestamp() as usize,
         exp: (Utc::now().timestamp() + Duration::days(365 * 200).num_seconds()) as usize,
     };
 
@@ -24,7 +24,12 @@ pub fn gen_token(user_id: String) -> Result<String, Error> {
 }
 
 pub fn extract_uid(token: &str) -> Result<String, Error> {
-    let claims = decode::<Claims>(&token, &DecodingKey::from_secret(JWT_SECRET.as_ref()), &Validation::default())?.claims;
+    let claims = decode::<Claims>(
+        &token,
+        &DecodingKey::from_secret(JWT_SECRET.as_ref()),
+        &Validation::default(),
+    )?
+    .claims;
 
     Ok(claims.user_id)
 }
@@ -32,5 +37,18 @@ pub fn extract_uid(token: &str) -> Result<String, Error> {
 #[derive(Deserialize, Serialize)]
 struct Claims {
     user_id: String, //uuid v4
-    exp: usize
+    iat: usize,
+    exp: usize,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct Authenticated<P> {
+    pub user_id: String,
+    pub token: String,
+    pub payload: P,
+}
+
+#[derive(Clone)]
+pub struct JwtMiddleware {
+
 }
