@@ -1,23 +1,42 @@
-use axum::{http::StatusCode, response::IntoResponse, Extension, Json};
+use axum::Extension;
+use axum::{response::IntoResponse, Json};
+use axum::http::StatusCode;
 use log::info;
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 
-use crate::jwt::Claims;
+use crate::config::Config;
+use crate::Db;
 
-pub async fn new_key(Extension(claims): Extension<Claims>, Json(payoad): Json<NewBetaKeyRequest>) -> impl IntoResponse {
-    let key = gen_beta_key();
 
-    //Add to db
 
-    info!("'{}' ({}) -> created new beta key: {}", payoad.discord_id, payoad.name, key);
-    (StatusCode::CREATED, key)
+pub async fn new_key(
+    Extension(db): Extension<Db>, 
+    Extension(cfg): Extension<Config>, 
+    Json(payoad): Json<NewBetaKeyRequest>) 
+    -> impl IntoResponse {
+
+    let key_model = BetaKeyModel {
+        discord_id: payoad.discord_id,
+        beta_key: gen_beta_key(),
+    };
+
+    db.insert((&cfg.db_config));
+
+    info!("'{}' ({}) -> created new beta key: {}", payoad.discord_id, payoad.name, key_model.beta_key);
+    (StatusCode::CREATED, key_model.beta_key)
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct NewBetaKeyRequest {
     pub discord_id: i64,
     pub name: String,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct BetaKeyModel {
+    pub discord_id: i64,
+    pub beta_key: String,
 }
 
 pub async fn get_key() -> impl IntoResponse {}

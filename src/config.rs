@@ -12,16 +12,24 @@ pub fn load() -> Config {
 
 #[derive(Deserialize)]
 pub struct Config {
-    #[serde(rename = "serverAddr")]
     pub server_addr: String,
-    pub db_config: DbConfig,
+
+    #[serde(rename = "surrealdb")]
+    pub db_cfg: DbConfig,
 }
 
 #[derive(Deserialize)]
 pub struct DbConfig {
+    //Credentials
     pub addr: String,
     pub username: String,
     pub password: String,
     pub namespace: String,
     pub database: String,
+
+    //Tables
+    pub beta_key_table: String,
+    pub user_table: String,
+    pub video_table: String,
+    pub quest_table: String,
 }
