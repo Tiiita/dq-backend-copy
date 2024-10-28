@@ -14,13 +14,14 @@ pub fn load() -> Config {
 pub struct Config {
     #[serde(rename = "serverAddr")]
     pub server_addr: String,
-    pub db: DbCredentials,
+    pub db_config: DbConfig,
 }
 
 #[derive(Deserialize)]
-pub struct DbCredentials {
+pub struct DbConfig {
     pub addr: String,
     pub username: String,
     pub password: String,
-    pub port: i32,
+    pub namespace: String,
+    pub database: String,
 }

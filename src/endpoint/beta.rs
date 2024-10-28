@@ -1,16 +1,23 @@
-use axum::{http::StatusCode, response::IntoResponse, Extension};
+use axum::{http::StatusCode, response::IntoResponse, Extension, Json};
 use log::info;
 use rand::{thread_rng, Rng};
+use serde::{Deserialize, Serialize};
 
 use crate::jwt::Claims;
 
-pub async fn new_key(Extension(claims): Extension<Claims>) -> impl IntoResponse {
+pub async fn new_key(Extension(claims): Extension<Claims>, Json(payoad): Json<NewBetaKeyRequest>) -> impl IntoResponse {
     let key = gen_beta_key();
 
     //Add to db
 
-    info!("'{}' created new beta key: {}", claims.user_id, key);
+    info!("'{}' ({}) -> created new beta key: {}", payoad.discord_id, payoad.name, key);
     (StatusCode::CREATED, key)
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct NewBetaKeyRequest {
+    pub discord_id: i64,
+    pub name: String,
 }
 
 pub async fn get_key() -> impl IntoResponse {}
