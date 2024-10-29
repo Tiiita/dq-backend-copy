@@ -4,8 +4,9 @@ use axum::http::StatusCode;
 use log::info;
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
+use surrealdb::sql::Thing;
 
-use crate::config::Config;
+use crate::config::{Config, BETA_KEY_TABLE};
 use crate::Db;
 
 
@@ -14,17 +15,16 @@ pub async fn new_key(
     Extension(db): Extension<Db>, 
     Extension(cfg): Extension<Config>, 
     Json(payoad): Json<NewBetaKeyRequest>) 
-    -> impl IntoResponse {
+    -> Result<impl IntoResponse, ()> {
 
     let key_model = BetaKeyModel {
-        discord_id: payoad.discord_id,
         beta_key: gen_beta_key(),
     };
 
-    db.insert((&cfg.db_config));
+    db.insert((BETA_KEY_TABLE, payoad.discord_id)).content(key_model);
 
     info!("'{}' ({}) -> created new beta key: {}", payoad.discord_id, payoad.name, key_model.beta_key);
-    (StatusCode::CREATED, key_model.beta_key)
+    Ok((StatusCode::CREATED, key_model.beta_key))
 }
 
 #[derive(Serialize, Deserialize)]
@@ -35,7 +35,6 @@ pub struct NewBetaKeyRequest {
 
 #[derive(Serialize, Deserialize)]
 pub struct BetaKeyModel {
-    pub discord_id: i64,
     pub beta_key: String,
 }
 

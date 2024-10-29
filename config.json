@@ -5,11 +5,6 @@
         "username": "dayquest",
         "password": "9G9QW,TB_@rwoTP#1{ZH88Pcvs0v9#C]8k{==2:zf$Zwo'=<=+",
         "namespace": "dayquest",
-        "database": "dayquest",
-
-        "beta_key_table": "beta_keys",
-        "user_table": "users",
-        "video_table": "videos",
-        "quest_table": "quests"
+        "database": "dayquest"
     }
 }

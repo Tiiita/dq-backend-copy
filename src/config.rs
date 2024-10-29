@@ -18,6 +18,12 @@ pub struct Config {
     pub db_cfg: DbConfig,
 }
 
+pub const BETA_KEY_TABLE: &'static str = "beta_keys";
+pub const USER_TABLE: &'static str = "users";
+pub const VIDEO_TABLE: &'static str = "videos";
+pub const QUEST_TABLE: &'static str = "quests";
+
+
 #[derive(Deserialize)]
 pub struct DbConfig {
     //Credentials
@@ -26,10 +32,4 @@ pub struct DbConfig {
     pub password: String,
     pub namespace: String,
     pub database: String,
-
-    //Tables
-    pub beta_key_table: String,
-    pub user_table: String,
-    pub video_table: String,
-    pub quest_table: String,
 }
