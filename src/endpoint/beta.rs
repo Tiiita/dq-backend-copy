@@ -1,29 +1,30 @@
+use axum::http::StatusCode;
 use axum::Extension;
 use axum::{response::IntoResponse, Json};
-use axum::http::StatusCode;
 use log::info;
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
-use surrealdb::sql::Thing;
+use surrealdb::Error;
 
-use crate::config::{Config, BETA_KEY_TABLE};
+use crate::config::BETA_KEY_TABLE;
 use crate::Db;
 
-
-
 pub async fn new_key(
-    Extension(db): Extension<Db>, 
-    Extension(cfg): Extension<Config>, 
-    Json(payoad): Json<NewBetaKeyRequest>) 
-    -> Result<impl IntoResponse, ()> {
-
+    Extension(db): Extension<Db>,
+    Json(payoad): Json<NewBetaKeyRequest>,
+) -> Result<impl IntoResponse, Error> {
     let key_model = BetaKeyModel {
         beta_key: gen_beta_key(),
     };
 
-    db.insert((BETA_KEY_TABLE, payoad.discord_id)).content(key_model);
+    db.insert::<Option<BetaKeyModel>>((BETA_KEY_TABLE, payoad.discord_id))
+        .content(key_model.clone())
+        .await?;
 
-    info!("'{}' ({}) -> created new beta key: {}", payoad.discord_id, payoad.name, key_model.beta_key);
+    info!(
+        "'{}' ({}) -> created new beta key: {}",
+        payoad.discord_id, payoad.name, key_model.beta_key
+    );
     Ok((StatusCode::CREATED, key_model.beta_key))
 }
 
@@ -33,7 +34,7 @@ pub struct NewBetaKeyRequest {
     pub name: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct BetaKeyModel {
     pub beta_key: String,
 }
