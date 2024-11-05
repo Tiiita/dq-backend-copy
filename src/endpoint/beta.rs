@@ -46,7 +46,7 @@ pub async fn new_key(
         payoad.discord_id, payoad.name, key_model.beta_key
     );
 
-    (StatusCode::CREATED, )
+    (StatusCode::CREATED, key_model.beta_key)
 }
 
 
