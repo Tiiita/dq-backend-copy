@@ -50,8 +50,6 @@ pub async fn new_key(
     (StatusCode::CREATED, key_model.beta_key)
 }
 
-
-
 #[derive(Serialize, Deserialize)]
 pub struct NewBetaKeyRequest {
     pub discord_id: i64,
@@ -70,9 +68,7 @@ pub struct BetaKeyModel {
 }
 
 pub async fn get_key() -> impl IntoResponse {}
-
 pub async fn remove_key() -> impl IntoResponse {}
-
 pub async fn is_valid() -> impl IntoResponse {}
 
 pub fn gen_beta_key() -> String {
