@@ -10,7 +10,6 @@ use dq_backend::{
 };
 use env_logger::Builder;
 use log::{info, LevelFilter};
-use serde::Serialize;
 use surrealdb::{engine::remote::ws::Ws, opt::auth::Root, Surreal};
 use tokio::net::TcpListener;
 

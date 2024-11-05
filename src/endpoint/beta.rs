@@ -3,6 +3,7 @@ use std::sync::Arc;
 use axum::http::StatusCode;
 use axum::Extension;
 use axum::{response::IntoResponse, Json};
+use log::{error, info};
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 
