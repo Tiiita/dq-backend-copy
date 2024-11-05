@@ -1,37 +1,66 @@
+use std::sync::Arc;
+
 use axum::http::StatusCode;
 use axum::Extension;
 use axum::{response::IntoResponse, Json};
-use log::info;
+use log::{error, info};
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
-use surrealdb::Error;
 
 use crate::config::BETA_KEY_TABLE;
-use crate::Db;
-
+use crate::SurrealDb;
 pub async fn new_key(
-    Extension(db): Extension<Db>,
+    Extension(db): Extension<Arc<SurrealDb>>,
     Json(payoad): Json<NewBetaKeyRequest>,
-) -> Result<impl IntoResponse, Error> {
+) -> impl IntoResponse {
+
     let key_model = BetaKeyModel {
         beta_key: gen_beta_key(),
     };
 
-    db.insert::<Option<BetaKeyModel>>((BETA_KEY_TABLE, payoad.discord_id))
+    let record_id = (BETA_KEY_TABLE, payoad.discord_id);
+
+    match db.select::<Option<BetaKeyModel>>(record_id).await {
+        Ok(res) => {
+            if res.is_some() {
+                return (StatusCode::NOT_ACCEPTABLE, "That user already has a beta key registered");
+            }
+        },
+        Err(why) => {
+            error!("Failed checking existence of user: {:?}", why);
+           return (StatusCode::INTERNAL_SERVER_ERROR, "");
+        },
+    }
+
+    if let Err(why) = db
+        .insert::<Option<BetaKeyModel>>(record_id)
         .content(key_model.clone())
-        .await?;
+        .await
+    {
+        error!("Failed to write to db: {:?}", why);
+        return (StatusCode::INTERNAL_SERVER_ERROR, "");
+    }
 
     info!(
-        "'{}' ({}) -> created new beta key: {}",
+        "{} ({}) -> created new beta key: {}",
         payoad.discord_id, payoad.name, key_model.beta_key
     );
-    Ok((StatusCode::CREATED, key_model.beta_key))
+
+    (StatusCode::CREATED, )
 }
+
+
 
 #[derive(Serialize, Deserialize)]
 pub struct NewBetaKeyRequest {
     pub discord_id: i64,
     pub name: String,
+}
+
+#[derive(Deserialize)]
+pub struct NewBetaKeyResponse {
+    pub message: String,
+    pub key: Option<String>
 }
 
 #[derive(Deserialize, Serialize, Clone)]

@@ -957,6 +957,7 @@ dependencies = [
  "figment",
  "jsonwebtoken",
  "log",
+ "mime",
  "rand",
  "serde",
  "serde_json",

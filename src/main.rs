@@ -1,11 +1,17 @@
-
 use std::sync::Arc;
 
-use axum::{middleware, routing::{get, post}, serve, Router};
+use axum::{
+    http::{Response, StatusCode}, middleware, response::IntoResponse, routing::{get, post}, serve, Extension, Json, Router
+};
+use dq_backend::{
+    config::{self, Config, DbConfig},
+    endpoint::{beta, user},
+    jwt, SurrealDb,
+};
 use env_logger::Builder;
 use log::{info, LevelFilter};
-use dq_backend::{config::{self, Config, DbConfig}, endpoint::{beta, user}, jwt};
-use surrealdb::{engine::remote::ws::{Client, Ws}, opt::auth::Root, Error, Surreal};
+use serde::Serialize;
+use surrealdb::{engine::remote::ws::Ws, opt::auth::Root, Surreal};
 use tokio::net::TcpListener;
 
 #[tokio::main]
@@ -15,9 +21,11 @@ async fn main() {
         .format_target(false)
         .init();
 
+    info!("Booting up..");
+
     let config = config::load();
 
-    let db = connect_db(&config.db_config).await.expect("Failed to establish database connection");
+    let db = connect_db(&config.db_cfg).await;
 
     let listener = TcpListener::bind(&config.server_addr)
         .await
@@ -29,21 +37,29 @@ async fn main() {
         .expect("Failed to start server");
 }
 
-async fn connect_db(db_conf: &DbConfig) -> Result<Surreal<Client>, Error> {
-    let db = Surreal::new::<Ws>(&db_conf.addr).await?;
+async fn connect_db(db_conf: &DbConfig) -> SurrealDb {
+    let db = Surreal::new::<Ws>(&db_conf.addr)
+        .await
+        .expect("Failed to initalize database");
     db.signin(Root {
         username: &db_conf.username,
         password: &db_conf.password,
-    }).await.expect("Failed to signin into database");
+    })
+    .await
+    .expect("Failed to signin into database");
 
-    db.use_ns(&db_conf.namespace).await.expect("Failed to select namespace");
-    db.use_db(&db_conf.database).await.expect("Failed to select database");
-    info!("Connected to database");
+    db.use_ns(&db_conf.namespace)
+        .await
+        .expect("Failed to select namespace");
+    db.use_db(&db_conf.database)
+        .await
+        .expect("Failed to select database");
+    info!("Connection to database established");
 
-    Ok(db)
+    db
 }
 
-fn app(config: Config, db: Surreal<Client>) -> Router {
+fn app(config: Config, db: SurrealDb) -> Router {
     let authenticated_router = Router::new()
         .route("/beta/new-key", post(beta::new_key))
         .route("/beta/remove-key", post(beta::remove_key))
@@ -59,6 +75,6 @@ fn app(config: Config, db: Surreal<Client>) -> Router {
         .route("/user/login", post(user::login_user));
 
     Router::merge(authenticated_router, unauthed_router)
-    .with_state(Arc::new(config))
-    .with_state(Arc::new(db))
+    .layer(Extension(Arc::new(config)))
+    .layer(Extension(Arc::new(db)))
 }
