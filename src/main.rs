@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use axum::{
-    http::{Response, StatusCode}, middleware, response::IntoResponse, routing::{get, post}, serve, Extension, Json, Router
+    middleware, routing::{get, post}, serve, Extension, Router
 };
 use dq_backend::{
     config::{self, Config, DbConfig},
