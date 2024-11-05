@@ -3,7 +3,6 @@ use std::sync::Arc;
 use axum::http::StatusCode;
 use axum::Extension;
 use axum::{response::IntoResponse, Json};
-use log::{error, info};
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 
@@ -12,7 +11,7 @@ use crate::SurrealDb;
 pub async fn new_key(
     Extension(db): Extension<Arc<SurrealDb>>,
     Json(payoad): Json<NewBetaKeyRequest>,
-) -> impl IntoResponse {
+) -> (StatusCode, String) {
 
     let key_model = BetaKeyModel {
         beta_key: gen_beta_key(),
@@ -23,12 +22,12 @@ pub async fn new_key(
     match db.select::<Option<BetaKeyModel>>(record_id).await {
         Ok(res) => {
             if res.is_some() {
-                return (StatusCode::NOT_ACCEPTABLE, "That user already has a beta key registered");
+                return (StatusCode::NOT_ACCEPTABLE, "That user already has a beta key registered".into());
             }
         },
         Err(why) => {
             error!("Failed checking existence of user: {:?}", why);
-           return (StatusCode::INTERNAL_SERVER_ERROR, "");
+           return (StatusCode::INTERNAL_SERVER_ERROR, "".into());
         },
     }
 
@@ -38,13 +37,14 @@ pub async fn new_key(
         .await
     {
         error!("Failed to write to db: {:?}", why);
-        return (StatusCode::INTERNAL_SERVER_ERROR, "");
+        return (StatusCode::INTERNAL_SERVER_ERROR, "".into());
     }
 
     info!(
         "{} ({}) -> created new beta key: {}",
         payoad.discord_id, payoad.name, key_model.beta_key
     );
+
 
     (StatusCode::CREATED, key_model.beta_key)
 }
