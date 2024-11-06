@@ -58,7 +58,7 @@ pub struct NewBetaKeyRequest {
     pub name: String,
 }
 
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct BetaKeyModel {
     pub beta_key: String,
     pub used: bool,
@@ -76,11 +76,11 @@ pub async fn is_valid(
     Extension(db): Extension<Arc<SurrealDb>>,
     Json(payoad): Json<IsValidRequest>,
 ) -> impl IntoResponse {
-
-    let record_id = (BETA_KEY_TABLE, &payoad.key);
-    match db.select::<Option<BetaKeyModel>>(record_id).await {
-        Ok(res) => {
-            if let Some(key_model) = res {
+    match db.query("SELECT * FROM type::table($table) WHERE beta_key = $key")
+    .bind(("table", BETA_KEY_TABLE))
+    .bind(("key", payoad.key.clone())).await {
+        Ok(mut res) => {
+            if let Some(key_model) = res.take::<Option<BetaKeyModel>>(0).unwrap() {
                 let status = if key_model.used { StatusCode::IM_USED } else { StatusCode::OK };
                 let message = if key_model.used { "Beta key is already in active use" } else { "Code can be used" };
 
@@ -92,8 +92,8 @@ pub async fn is_valid(
             }
         }
         Err(why) => {
-            error!("Failed checking existence of user: {:?}", why);
-            return (StatusCode::INTERNAL_SERVER_ERROR, "");
+            error!("Failed fetching beta key: {:?}", why);
+            return (StatusCode::INTERNAL_SERVER_ERROR, "Error retrieving key information");
         }
     }
 }
