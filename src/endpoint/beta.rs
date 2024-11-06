@@ -3,7 +3,7 @@ use std::sync::Arc;
 use axum::http::StatusCode;
 use axum::Extension;
 use axum::{response::IntoResponse, Json};
-use log::{error, info};
+use log::{error, info, warn};
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 
@@ -77,14 +77,17 @@ pub async fn is_valid(
     Json(payoad): Json<IsValidRequest>,
 ) -> impl IntoResponse {
 
-    let record_id = (BETA_KEY_TABLE, payoad.key);
+    let record_id = (BETA_KEY_TABLE, &payoad.key);
     match db.select::<Option<BetaKeyModel>>(record_id).await {
         Ok(res) => {
             if let Some(key_model) = res {
                 let status = if key_model.used { StatusCode::IM_USED } else { StatusCode::OK };
                 let message = if key_model.used { "Beta key is already in active use" } else { "Code can be used" };
+
+                info!("'{}' got checked. Result -> {message}", payoad.key);
                 return (status, message);
             } else {
+                warn!("Unknown key '{}' was checked", payoad.key);
                 return (StatusCode::NOT_FOUND, "Key not found");
             }
         }

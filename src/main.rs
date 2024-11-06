@@ -11,7 +11,7 @@ use dq_backend::{
     jwt, SurrealDb,
 };
 use env_logger::Builder;
-use log::{info, LevelFilter};
+use log::{debug, info, LevelFilter};
 use surrealdb::{engine::remote::ws::Ws, opt::auth::Root, Surreal};
 use tokio::net::TcpListener;
 
@@ -24,6 +24,7 @@ async fn main() {
 
     info!("Booting up..");
 
+    debug!("jwt: {}", jwt::gen_token("debugUser".into()).unwrap());
     let config = config::load();
 
     let db = connect_db(&config.db_cfg).await;
