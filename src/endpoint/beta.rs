@@ -64,7 +64,35 @@ pub struct BetaKeyModel {
     pub used: bool,
 }
 
-pub async fn get_key() -> impl IntoResponse {}
+#[derive(Clone, Deserialize)]
+pub struct GetKeyRequest {
+    pub discord_id: i64,
+}
+
+pub async fn get_key(
+    Extension(db): Extension<Arc<SurrealDb>>,
+    Json(payoad): Json<GetKeyRequest>,
+) -> impl IntoResponse {
+
+    match db.select::<Option<BetaKeyModel>>((BETA_KEY_TABLE, payoad.discord_id.clone())).await {
+        Ok(res) => {
+            match res {
+                Some(key) => {
+                    info!("'{}' requested key information for: {}", payoad.discord_id, key.beta_key);
+                    return (StatusCode::OK, Json(Some(key)));
+                },
+                None => {
+                    warn!("'{} tried to get key which does not exist", payoad.discord_id);
+                    return (StatusCode::NOT_FOUND, Json(None)) 
+                },
+            }
+        },
+        Err(why) => {
+            error!("Error retrieving key by discord id: {:?}", why);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(None));
+        }
+    }
+}
 pub async fn remove_key() -> impl IntoResponse {}
 
 #[derive(Deserialize)]
@@ -76,13 +104,24 @@ pub async fn is_valid(
     Extension(db): Extension<Arc<SurrealDb>>,
     Json(payoad): Json<IsValidRequest>,
 ) -> impl IntoResponse {
-    match db.query("SELECT * FROM type::table($table) WHERE beta_key = $key")
-    .bind(("table", BETA_KEY_TABLE))
-    .bind(("key", payoad.key.clone())).await {
+    match db
+        .query("SELECT * FROM type::table($table) WHERE beta_key = $key")
+        .bind(("table", BETA_KEY_TABLE))
+        .bind(("key", payoad.key.clone()))
+        .await
+    {
         Ok(mut res) => {
             if let Some(key_model) = res.take::<Option<BetaKeyModel>>(0).unwrap() {
-                let status = if key_model.used { StatusCode::IM_USED } else { StatusCode::OK };
-                let message = if key_model.used { "Beta key is already in active use" } else { "Code can be used" };
+                let status = if key_model.used {
+                    StatusCode::IM_USED
+                } else {
+                    StatusCode::OK
+                };
+                let message = if key_model.used {
+                    "Beta key is already in active use"
+                } else {
+                    "Code can be used"
+                };
 
                 info!("'{}' got checked. Result -> {message}", payoad.key);
                 return (status, message);
@@ -93,7 +132,10 @@ pub async fn is_valid(
         }
         Err(why) => {
             error!("Failed fetching beta key: {:?}", why);
-            return (StatusCode::INTERNAL_SERVER_ERROR, "Error retrieving key information");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Error retrieving key information",
+            );
         }
     }
 }
