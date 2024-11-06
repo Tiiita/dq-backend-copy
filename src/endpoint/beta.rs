@@ -73,18 +73,24 @@ pub async fn get_key(
     Extension(db): Extension<Arc<SurrealDb>>,
     Json(payoad): Json<GetKeyRequest>,
 ) -> impl IntoResponse {
-
-    match db.select::<Option<BetaKeyModel>>((BETA_KEY_TABLE, payoad.discord_id.clone())).await {
-        Ok(res) => {
-            match res {
-                Some(key) => {
-                    info!("'{}' requested key information for: {}", payoad.discord_id, key.beta_key);
-                    return (StatusCode::OK, Json(Some(key)));
-                },
-                None => {
-                    warn!("'{} tried to get key which does not exist", payoad.discord_id);
-                    return (StatusCode::NOT_FOUND, Json(None)) 
-                },
+    match db
+        .select::<Option<BetaKeyModel>>((BETA_KEY_TABLE, payoad.discord_id.clone()))
+        .await
+    {
+        Ok(res) => match res {
+            Some(key) => {
+                info!(
+                    "'{}' requested key information for: {}",
+                    payoad.discord_id, key.beta_key
+                );
+                return (StatusCode::OK, Json(Some(key)));
+            }
+            None => {
+                warn!(
+                    "'{} tried to get key which does not exist",
+                    payoad.discord_id
+                );
+                return (StatusCode::NOT_FOUND, Json(None));
             }
         },
         Err(why) => {
@@ -110,8 +116,8 @@ pub async fn is_valid(
         .bind(("key", payoad.key.clone()))
         .await
     {
-        Ok(mut res) => {
-            if let Some(key_model) = res.take::<Option<BetaKeyModel>>(0).unwrap() {
+        Ok(mut res) => match res.take::<Option<BetaKeyModel>>(0).unwrap() {
+            Some(key_model) => {
                 let status = if key_model.used {
                     StatusCode::IM_USED
                 } else {
@@ -125,11 +131,12 @@ pub async fn is_valid(
 
                 info!("'{}' got checked. Result -> {message}", payoad.key);
                 return (status, message);
-            } else {
+            }
+            None => {
                 warn!("Unknown key '{}' was checked", payoad.key);
                 return (StatusCode::NOT_FOUND, "Key not found");
             }
-        }
+        },
         Err(why) => {
             error!("Failed fetching beta key: {:?}", why);
             return (
