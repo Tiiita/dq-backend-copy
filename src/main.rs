@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
 use axum::{
-    middleware, routing::{get, post}, serve, Extension, Router
+    middleware,
+    routing::{get, post},
+    serve, Extension, Router,
 };
 use dq_backend::{
     config::{self, Config, DbConfig},
@@ -35,7 +37,6 @@ async fn main() {
         .await
         .expect("Failed to start server");
 }
-
 async fn connect_db(db_conf: &DbConfig) -> SurrealDb {
     let db = Surreal::new::<Ws>(&db_conf.addr)
         .await
@@ -74,6 +75,6 @@ fn app(config: Config, db: SurrealDb) -> Router {
         .route("/user/login", post(user::login_user));
 
     Router::merge(authenticated_router, unauthed_router)
-    .layer(Extension(Arc::new(config)))
-    .layer(Extension(Arc::new(db)))
+        .layer(Extension(Arc::new(config)))
+        .layer(Extension(Arc::new(db)))
 }

@@ -13,9 +13,9 @@ pub async fn new_key(
     Extension(db): Extension<Arc<SurrealDb>>,
     Json(payoad): Json<NewBetaKeyRequest>,
 ) -> (StatusCode, String) {
-
     let key_model = BetaKeyModel {
         beta_key: gen_beta_key(),
+        used: false,
     };
 
     let record_id = (BETA_KEY_TABLE, payoad.discord_id);
@@ -23,13 +23,16 @@ pub async fn new_key(
     match db.select::<Option<BetaKeyModel>>(record_id).await {
         Ok(res) => {
             if res.is_some() {
-                return (StatusCode::NOT_ACCEPTABLE, "That user already has a beta key registered".into());
+                return (
+                    StatusCode::NOT_ACCEPTABLE,
+                    "That user already has a beta key registered".into(),
+                );
             }
-        },
+        }
         Err(why) => {
             error!("Failed checking existence of user: {:?}", why);
-           return (StatusCode::INTERNAL_SERVER_ERROR, "".into());
-        },
+            return (StatusCode::INTERNAL_SERVER_ERROR, "".into());
+        }
     }
 
     if let Err(why) = db
@@ -46,7 +49,6 @@ pub async fn new_key(
         payoad.discord_id, payoad.name, key_model.beta_key
     );
 
-
     (StatusCode::CREATED, key_model.beta_key)
 }
 
@@ -56,20 +58,42 @@ pub struct NewBetaKeyRequest {
     pub name: String,
 }
 
-#[derive(Deserialize)]
-pub struct NewBetaKeyResponse {
-    pub message: String,
-    pub key: Option<String>
-}
-
 #[derive(Deserialize, Serialize, Clone)]
 pub struct BetaKeyModel {
     pub beta_key: String,
+    pub used: bool,
 }
 
 pub async fn get_key() -> impl IntoResponse {}
 pub async fn remove_key() -> impl IntoResponse {}
-pub async fn is_valid() -> impl IntoResponse {}
+
+#[derive(Deserialize)]
+pub struct IsValidRequest {
+    pub key: String,
+}
+
+pub async fn is_valid(
+    Extension(db): Extension<Arc<SurrealDb>>,
+    Json(payoad): Json<IsValidRequest>,
+) -> impl IntoResponse {
+
+    let record_id = (BETA_KEY_TABLE, payoad.key);
+    match db.select::<Option<BetaKeyModel>>(record_id).await {
+        Ok(res) => {
+            if let Some(key_model) = res {
+                let status = if key_model.used { StatusCode::IM_USED } else { StatusCode::OK };
+                let message = if key_model.used { "Beta key is already in active use" } else { "Code can be used" };
+                return (status, message);
+            } else {
+                return (StatusCode::NOT_FOUND, "Key not found");
+            }
+        }
+        Err(why) => {
+            error!("Failed checking existence of user: {:?}", why);
+            return (StatusCode::INTERNAL_SERVER_ERROR, "");
+        }
+    }
+}
 
 pub fn gen_beta_key() -> String {
     const LENGTH: i32 = 12;

@@ -3,7 +3,7 @@
     "surrealdb": {
         "addr": "127.0.0.1:8000",
         "username": "root",
-        "password": "9G9QW,TB_@rwoTP#1{ZH88Pcvs0v9#C]8k{==2:zf$Zwo'=<=+",
+        "password": "root",
         "namespace": "dayquest",
         "database": "dayquest"
     }
