@@ -6,9 +6,17 @@ use axum::{response::IntoResponse, Json};
 use log::{error, info, warn};
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
+use surrealdb::opt::PatchOp;
 
 use crate::config::BETA_KEY_TABLE;
 use crate::SurrealDb;
+
+#[derive(Deserialize, Serialize, Clone, Debug)]
+pub struct BetaKeyModel {
+    pub beta_key: String,
+    pub used: bool,
+}
+
 pub async fn new_key(
     Extension(db): Extension<Arc<SurrealDb>>,
     Json(payoad): Json<NewBetaKeyRequest>,
@@ -56,12 +64,6 @@ pub async fn new_key(
 pub struct NewBetaKeyRequest {
     pub discord_id: i64,
     pub name: String,
-}
-
-#[derive(Deserialize, Serialize, Clone, Debug)]
-pub struct BetaKeyModel {
-    pub beta_key: String,
-    pub used: bool,
 }
 
 #[derive(Clone, Deserialize)]
@@ -145,6 +147,47 @@ pub async fn is_valid(
             );
         }
     }
+}
+
+#[derive(Clone, Deserialize)]
+pub struct ActivateKeyRequest {
+    pub key: String,
+    pub user_id: String,
+}
+
+pub async fn activate_key(Extension(db): Extension<Arc<SurrealDb>>, Json(payoad): Json<ActivateKeyRequest>) -> impl IntoResponse {
+    match db.select::<Option<BetaKeyModel>>((BETA_KEY_TABLE, payoad.key.clone())).await {
+        Ok(res) => {
+            match res {
+                Some(_) => {
+                    match db.update::<Option<BetaKeyModel>>((BETA_KEY_TABLE, payoad.key.clone()))
+                    .patch(PatchOp::replace("used", true)).await {
+                        Ok(_) => {
+                            info!("'{}' activated key: {}", payoad.user_id, payoad.key);
+                            return (StatusCode::OK, "Updated key in-use status");
+                        },
+
+                        Err(why) => {
+                            error!("Failed to activate key: {:?}", why);
+                            return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to update key");
+                        },
+                    }
+                },
+                None => {
+                    warn!("'{}' tried to activate unknown key: {}", payoad.user_id, payoad.key);
+                    return (StatusCode::NOT_FOUND, "Key not found");
+                },
+            }
+        },
+        Err(why) => {
+            error!("Failed to retrieve key: {:?}", why);
+            return (StatusCode::INTERNAL_SERVER_ERROR, "");
+        },
+    }
+}
+
+pub async fn deactivate_key(Extension(_db): Extension<Arc<SurrealDb>>) -> impl IntoResponse {
+    
 }
 
 pub fn gen_beta_key() -> String {
