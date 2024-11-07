@@ -1,12 +1,11 @@
 use std::sync::Arc;
 
 use axum::http::StatusCode;
-use axum::{Error, Extension};
+use axum::Extension;
 use axum::{response::IntoResponse, Json};
 use log::{error, info, warn};
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
-use surrealdb::opt::PatchOp;
 
 use crate::config::BETA_KEY_TABLE;
 use crate::SurrealDb;
@@ -155,11 +154,6 @@ pub async fn is_valid(
 pub struct ActivateKeyRequest {
     pub key: String,
     pub user_id: String,
-}
-
-
-pub async fn deactivate_key(Extension(_db): Extension<Arc<SurrealDb>>) -> impl IntoResponse {
-    
 }
 
 

@@ -5,6 +5,7 @@ use axum::{
     routing::{get, post},
     serve, Extension, Router,
 };
+use dotenv::dotenv;
 use dq_backend::{
     config::{self, Config, DbConfig},
     endpoint::{beta, user},
@@ -17,6 +18,7 @@ use tokio::net::TcpListener;
 
 #[tokio::main]
 async fn main() {
+    dotenv().expect("Failed to load enviroment file");
     Builder::new()
         .filter_level(LevelFilter::Debug)
         .format_target(false)
@@ -67,7 +69,6 @@ fn app(config: Config, db: SurrealDb) -> Router {
         .route("/beta/is-valid", post(beta::is_valid))
         .route("/beta/get-key", get(beta::get_key))
         //.route("/beta/activate-key", post(beta::activate_key))
-        .route("/beta/deactivate-key", post(beta::deactivate_key))
         .route("/user/auth", post(user::auth_user))
         .route("/user/ban", post(user::ban_user))
         .route("/user/unban", post(user::unban_user))
