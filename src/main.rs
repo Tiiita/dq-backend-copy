@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Instant};
 
 use axum::{
     middleware,
@@ -18,6 +18,8 @@ use tokio::net::TcpListener;
 
 #[tokio::main]
 async fn main() {
+    let start_time = Instant::now();
+
     dotenv().expect("Failed to load enviroment file");
     Builder::new()
         .filter_level(LevelFilter::Debug)
@@ -34,7 +36,10 @@ async fn main() {
     let listener = TcpListener::bind(&config.server_addr)
         .await
         .expect("Failed to bind listener to address");
-    info!("Listening on {}", &config.server_addr);
+
+
+    let booting_time = start_time.elapsed().as_millis();
+    info!("Listening on {} (took: {} ms)", &config.server_addr, booting_time);
 
     serve(listener, app(config, db))
         .await

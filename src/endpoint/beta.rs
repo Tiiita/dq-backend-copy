@@ -14,7 +14,6 @@ use crate::SurrealDb;
 pub struct BetaKeyModel {
     pub beta_key: String,
     pub used: bool,
-    pub id: i64
 }
 
 pub async fn new_key(
@@ -24,10 +23,9 @@ pub async fn new_key(
     let key_model = BetaKeyModel {
         beta_key: gen_beta_key(),
         used: false,
-        id: payoad.discord_id,
     };
 
-    let record_id = (BETA_KEY_TABLE, key_model.id);
+    let record_id = (BETA_KEY_TABLE, payoad.discord_id);
 
     match db.select::<Option<BetaKeyModel>>(record_id).await {
         Ok(res) => {
